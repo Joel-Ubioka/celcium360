@@ -210,8 +210,9 @@
     padding-left: 15px;  /* optional, adds breathing room */
     padding-right: 15px;
 }
-
-
+   #mobile{
+        margin: 10px;
+    }
 /* Carousel captions mobile */
 @media (max-width: 767px) {
     .carousel-caption-inner {
@@ -330,6 +331,7 @@
     .testimonial-carousel .owl-nav .owl-next {
         right: -10px;
     }
+  
 }
 
 /* FAQ */
@@ -341,7 +343,10 @@
         margin-top: 2rem;
     }
     .faq-btn {
-        width: 100%;
+        min-width: 250px;
         text-align: center;
+    }
+      #mobile{
+        margin: 10px;
     }
 }
