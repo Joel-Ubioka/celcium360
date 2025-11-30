@@ -1,77 +1,98 @@
-// src/app/registration/registration.component.ts
-
-import { Component } from '@angular/core';
-import { ContactService, RegistrationRecord } from '../../core/services/contact.service';
-import { NgForm } from '@angular/forms';
+import { Component, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ContactService } from '../../core/services/contact.service';
 
 @Component({
   selector: 'app-registration',
   templateUrl: './registration.component.html',
   styleUrls: ['./registration.component.css']
 })
-export class RegistrationComponent {
-  
-  formData: RegistrationRecord = {
-    fullName: '',
-    email: '',
-    mobile: '',
-    isEmployed: null, 
-    companyName: '',
-    role: '',
-    registrationType: '',
-    gains: '',
-    referral: '',
-    consent: false
-  } as RegistrationRecord;
+export class RegistrationComponent implements OnInit {
 
-  formSubmitted: boolean = false;
+  registrationForm!: FormGroup;
+  formSubmitted = false;
 
-  constructor(private dataService: ContactService) { }
+  constructor(
+    private fb: FormBuilder,
+    private dataService: ContactService
+  ) {}
 
-onSubmit(form: NgForm) {
-  if (this.formSubmitted) return;
+  ngOnInit(): void {
+    this.registrationForm = this.fb.group({
+      fullName: ['', [Validators.required, Validators.minLength(3)]],
 
-  this.dataService.saveRegistration(this.formData).subscribe({
-    next: (response) => {
-      console.log('Registration submitted successfully. Firebase key:', response.name);
+      email: ['', [
+        Validators.required,
+        Validators.email
+      ]],
 
-      this.formSubmitted = true;
+      mobile: ['', [
+        Validators.required,
+        Validators.pattern(/^[0-9]{11}$/) // strict 11-digit Nigeria format
+      ]],
 
-      // ✅ Smoothly scroll to the top so success message is visible
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      isEmployed: [null, Validators.required],
 
-      // Reset form after 6 seconds
-      setTimeout(() => {
-        this.resetForm(form);
-      }, 6000);
-    },
-    error: (err: any) => {
-      console.error('Registration submission failed:', err);
-      alert('Submission failed. Please try again later.');
+      companyName: [''], // will be validated dynamically
+
+      role: [''],
+
+      registrationType: ['', Validators.required],
+
+      gains: ['', [Validators.minLength(10)]],
+
+      referral: ['', Validators.required],
+
+      consent: [false, Validators.requiredTrue]
+    });
+
+    // 🔥 Dynamic validation (companyName required when employed = Yes)
+    this.registrationForm.get('isEmployed')?.valueChanges.subscribe(value => {
+      const companyControl = this.registrationForm.get('companyName');
+
+      if (value === 'Yes') {
+        companyControl?.setValidators([Validators.required, Validators.minLength(2)]);
+      } else {
+        companyControl?.clearValidators();
+      }
+      companyControl?.updateValueAndValidity();
+    });
+  }
+
+  // ---------------------------------------
+  // SUBMIT FORM
+  // ---------------------------------------
+  onSubmit() {
+    if (this.registrationForm.invalid) {
+      this.registrationForm.markAllAsTouched();
+      return;
     }
-  });
-}
 
+    const payload = this.registrationForm.value;
 
-  // Method to reset the form and show the form again
-  resetForm(form: NgForm) {
+    this.dataService.saveRegistration(payload).subscribe({
+      next: (response) => {
+        console.log("Saved:", response.name);
+
+        this.formSubmitted = true;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        setTimeout(() => this.resetForm(), 6000);
+      },
+      error: () => {
+        alert("Submission failed. Please try again later.");
+      }
+    });
+  }
+
+  // RESET FORM
+  resetForm() {
     this.formSubmitted = false;
-    
-    // Reset the form data
-    this.formData = {
-      fullName: '',
-      email: '',
-      mobile: '',
-      isEmployed: null, 
-      companyName: '',
-      role: '',
-      registrationType: '',
-      gains: '',
-      referral: '',
-      consent: false
-    } as RegistrationRecord;
-    
-    // Reset the form validation state
-    form.resetForm();
+    this.registrationForm.reset();
+  }
+
+  // Shortcut for HTML
+  get f() {
+    return this.registrationForm.controls;
   }
 }
