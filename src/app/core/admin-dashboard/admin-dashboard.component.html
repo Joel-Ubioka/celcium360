@@ -24,6 +24,12 @@
       (click)="setActiveFilter('consultation')">
       💼 Consultation Requests
     </button>
+    <button 
+      class="filter-btn" 
+      [class.active]="activeFilter === 'participant'"
+      (click)="setActiveFilter('participant')">
+      👥 Participant Info
+    </button>
   </div>
 
   <!-- Controls Section -->
@@ -56,15 +62,25 @@
           <!-- Common Fields -->
           <th>Name</th>
           <th>Email</th>
-          <th>Phone Number</th>
           
           <!-- Dynamic Fields Based on Form Type -->
+          <th *ngIf="activeFilter === 'contact' || activeFilter === 'registration'">Phone</th>
           <th *ngIf="activeFilter === 'contact'" class="message-column">Message</th>
+          
           <th *ngIf="activeFilter === 'registration'">Company</th>
           <th *ngIf="activeFilter === 'registration'">Position</th>
+          <th *ngIf="activeFilter === 'registration'">Employment Status</th>
+          
           <th *ngIf="activeFilter === 'consultation'">Service Type</th>
-          <th *ngIf="activeFilter === 'consultation'">Budget</th>
-          <th *ngIf="activeFilter === 'consultation'" class="message-column">Project Details</th>
+          <th *ngIf="activeFilter === 'consultation'">Booking Date</th>
+          <th *ngIf="activeFilter === 'consultation'">Booking Time</th>
+          <th *ngIf="activeFilter === 'consultation'">Referral</th>
+          
+          <th *ngIf="activeFilter === 'participant'">Certificate Name</th>
+          <th *ngIf="activeFilter === 'participant'">Employment Status</th>
+          <th *ngIf="activeFilter === 'participant'">Job Title</th>
+          <th *ngIf="activeFilter === 'participant'">Organization</th>
+          <th *ngIf="activeFilter === 'participant'">Industry</th>
           
           <th>Date Submitted</th>
           <th>Actions</th>
@@ -101,6 +117,7 @@
             <td class="phone-cell">{{ record.phone }}</td>
             <td class="company-cell">{{ record.company || 'N/A' }}</td>
             <td class="position-cell">{{ record.position || 'N/A' }}</td>
+            <td class="employment-cell">{{ record.isEmployed || 'N/A' }}</td>
             <td class="date-cell">{{ record.date | date:'medium' }}</td>
             <td class="actions-cell">
               <button 
@@ -119,17 +136,38 @@
           <tr *ngFor="let record of paginatedRecords">
             <td class="name-cell">{{ record.name }}</td>
             <td class="email-cell">{{ record.email }}</td>
-            <td class="phone-cell">{{ record.phone }}</td>
             <td class="service-cell">{{ record.serviceType || 'N/A' }}</td>
-            <td class="budget-cell">{{ record.budget || 'N/A' }}</td>
-            <td class="message-cell">
-              <div class="message-content">{{ record.projectDetails || 'N/A' }}</div>
-            </td>
+            <td class="booking-date-cell">{{ record.bookingDate || 'N/A' }}</td>
+            <td class="booking-time-cell">{{ record.bookingTime || 'N/A' }}</td>
+            <td class="referral-cell">{{ record.referral || 'N/A' }}</td>
             <td class="date-cell">{{ record.date | date:'medium' }}</td>
             <td class="actions-cell">
               <button 
                 class="btn-delete" 
                 (click)="openDeleteSingleModal(record.id, record.name)"
+                title="Delete Record"
+              >
+                🗑️
+              </button>
+            </td>
+          </tr>
+        </ng-container>
+
+        <!-- Participant Info Records -->
+        <ng-container *ngIf="activeFilter === 'participant'">
+          <tr *ngFor="let record of paginatedRecords">
+            <td class="name-cell">{{ record.fullName || record.name }}</td>
+            <td class="email-cell">{{ record.email }}</td>
+            <td class="certificate-cell">{{ record.certificateName || 'N/A' }}</td>
+            <td class="employment-cell">{{ record.isEmployed || 'N/A' }}</td>
+            <td class="job-title-cell">{{ record.jobTitle || 'N/A' }}</td>
+            <td class="organization-cell">{{ record.organization || 'N/A' }}</td>
+            <td class="industry-cell">{{ record.industry || record.industryInterest || 'N/A' }}</td>
+            <td class="date-cell">{{ record.date | date:'medium' }}</td>
+            <td class="actions-cell">
+              <button 
+                class="btn-delete" 
+                (click)="openDeleteSingleModal(record.id, record.fullName || record.name)"
                 title="Delete Record"
               >
                 🗑️

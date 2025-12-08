@@ -1,81 +1,90 @@
 import { Component, OnInit } from '@angular/core';
-import { ContactService, RecordBase, ContactRecord, RegistrationRecord, ConsultationRecord } from '../services/contact.service';
+import { ContactService } from '../services/contact.service';
 import { AuthService } from '../auth/auth.service';
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
-export interface DashboardRecord extends RecordBase {
-  formType: 'contact' | 'registration' | 'consultation';
+export interface DashboardRecord {
+  id?: string;
+  formType: 'contact' | 'registration' | 'consultation' | 'participant';
   name: string;
   email: string;
-  phone: string;
+  phone?: string;
+  date?: any;
+  
+  // Contact fields
   message?: string;
-  fullName?: string;
-  mobile?: string;
-  isEmployed?: string | null;
-  companyName?: string;
-  role?: string;
-  registrationType?: string;
-  gains?: string;
-  referral?: string;
-  consent?: boolean;
-  service?: string;
-  dateBooked?: string;
-  bookingRef?: string;
+  
+  // Registration fields
   company?: string;
   position?: string;
+  mobile?: string;
+  isEmployed?: string | null;
+  
+  // Consultation fields
   serviceType?: string;
-  budget?: string;
-  projectDetails?: string;
+  bookingDate?: string;
+  bookingTime?: string;
+  referral?: string;
+  
+  // Participant fields
+  fullName?: string;
+  certificateName?: string;
+  jobTitle?: string;
+  organization?: string;
+  industry?: string;
+  industryInterest?: string;
+  careerStatus?: string;
 }
 
 @Component({
   selector: 'app-admin-dashboard',
   templateUrl: './admin-dashboard.component.html',
-  styleUrls: ['./admin-dashboard.component.css'],
+  styleUrls: ['./admin-dashboard.component.css']
 })
 export class AdminDashboardComponent implements OnInit {
   Math = Math;
-
+  
   records: DashboardRecord[] = [];
   paginatedRecords: DashboardRecord[] = [];
-
-  activeFilter: 'contact' | 'registration' | 'consultation' = 'contact';
+  
+  activeFilter: 'contact' | 'registration' | 'consultation' | 'participant' = 'contact';
   currentPage = 1;
   itemsPerPage = 10;
   totalPages = 0;
   searchTerm = '';
   loading = true;
-
+  
   showModal = false;
   modalTitle = '';
   modalMessage = '';
   modalAction: 'deleteSingle' | 'deletePage' | null = null;
   selectedRecordId: string | null = null;
   selectedRecordName: string | null = null;
-
+  
   constructor(
     private contactService: ContactService,
     private auth: AuthService,
     private router: Router
   ) {}
-
+  
   ngOnInit(): void {
     this.loadRecords();
   }
-
-  /** 🔹 Load all records from Firebase */
+  
   loadRecords(): void {
     this.loading = true;
-
+    
     forkJoin({
       contacts: this.contactService.getContacts(),
       registrations: this.contactService.getRegistrations(),
       consultations: this.contactService.getConsultations(),
+      participants: this.contactService.getParticipants()
     }).subscribe({
-      next: ({ contacts, registrations, consultations }) => {
+      next: ({ contacts, registrations, consultations, participants }) => {
         let combinedRecords: DashboardRecord[] = [];
-
+        
+        // Contact records
         combinedRecords.push(
           ...contacts.map(r => ({
             ...r,
@@ -83,10 +92,11 @@ export class AdminDashboardComponent implements OnInit {
             name: r.name,
             email: r.email,
             phone: r.phone,
-            message: r.message,
+            message: r.message
           }))
         );
-
+        
+        // Registration records
         combinedRecords.push(
           ...registrations.map(r => ({
             ...r,
@@ -95,100 +105,132 @@ export class AdminDashboardComponent implements OnInit {
             email: r.email,
             phone: r.mobile,
             company: r.companyName,
+            position: r.role,
+            isEmployed: r.isEmployed
           }))
         );
-
-     combinedRecords.push(
-  ...consultations.map(r => ({
-    ...r,
-    formType: 'consultation' as const,
-    name: r.fullName || 'N/A',
-    email: r.email,
-    serviceType: r.registrationType || 'Consultation',
-    bookingDate: r.bookingDate,
-    bookingTime: r.bookingTime,
-    referral: r.referral,
-phone: '', // Consultations don’t include phone numbers
-  }))
-);
-
-
-        this.records = combinedRecords.sort(
-          (a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime()
+        
+        // Consultation records
+        combinedRecords.push(
+          ...consultations.map(r => ({
+            ...r,
+            formType: 'consultation' as const,
+            name: r.fullName,
+            email: r.email,
+            serviceType: r.registrationType,
+            bookingDate: r.bookingDate,
+            bookingTime: r.bookingTime,
+            referral: r.referral
+          }))
         );
-
+        
+        // Participant records
+        combinedRecords.push(
+          ...participants.map(r => ({
+            ...r,
+            formType: 'participant' as const,
+            name: `${r.firstName || ''} ${r.middleName || ''} ${r.surname || ''}`.trim(),
+            fullName: `${r.firstName || ''} ${r.middleName || ''} ${r.surname || ''}`.trim(),
+            email: r.email,
+            certificateName: r.certificateName,
+            isEmployed: r.isEmployed,
+            jobTitle: r.jobTitle,
+            organization: r.organization,
+            industry: r.industry,
+            industryInterest: r.industryInterest,
+            careerStatus: r.careerStatus
+          }))
+        );
+        
+        // Sort by date (newest first)
+        this.records = combinedRecords.sort((a, b) => {
+          const dateA = new Date(a.date || 0).getTime();
+          const dateB = new Date(b.date || 0).getTime();
+          return dateB - dateA;
+        });
+        
         this.updatePagination();
         this.loading = false;
       },
       error: err => {
         console.error('Error loading records:', err);
         this.loading = false;
-      },
+      }
     });
   }
-
-  /** 🔹 Set active filter and refresh */
-  setActiveFilter(filterType: 'contact' | 'registration' | 'consultation'): void {
+  
+  setActiveFilter(filterType: 'contact' | 'registration' | 'consultation' | 'participant'): void {
     this.activeFilter = filterType;
     this.currentPage = 1;
     this.updatePagination();
   }
-
-  /** 🔹 Filter label */
+  
   getActiveFilterLabel(): string {
     switch (this.activeFilter) {
       case 'contact': return 'Contact Form';
       case 'registration': return 'Registration';
       case 'consultation': return 'Consultation';
+      case 'participant': return 'Participant Info';
       default: return 'Form';
     }
   }
-
-  /** 🔹 Column count for colspan */
+  
   getColumnCount(): number {
     switch (this.activeFilter) {
       case 'contact': return 6;
-      case 'registration': return 7;
+      case 'registration': return 8;
       case 'consultation': return 8;
+      case 'participant': return 9;
       default: return 5;
     }
   }
-
-  /** 🔹 Update pagination */
+  
   updatePagination(): void {
     const filteredByType = this.records.filter(r => r.formType === this.activeFilter);
-
+    
     const filtered = filteredByType.filter(r =>
       r.name?.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
       r.email?.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-      r.phone?.includes(this.searchTerm)
+      (r.phone && r.phone.includes(this.searchTerm)) ||
+      (this.activeFilter === 'participant' && 
+       (r.certificateName?.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        r.organization?.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        r.jobTitle?.toLowerCase().includes(this.searchTerm.toLowerCase())))
     );
-
+    
     this.totalPages = Math.ceil(filtered.length / this.itemsPerPage);
     const startIndex = (this.currentPage - 1) * this.itemsPerPage;
     this.paginatedRecords = filtered.slice(startIndex, startIndex + this.itemsPerPage);
   }
-
+  
+  onSearchChange(): void {
+    this.currentPage = 1;
+    this.updatePagination();
+  }
+  
   nextPage(): void {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
       this.updatePagination();
     }
   }
-
+  
   prevPage(): void {
     if (this.currentPage > 1) {
       this.currentPage--;
       this.updatePagination();
     }
   }
-
+  
   goToPage(page: number): void {
     this.currentPage = page;
     this.updatePagination();
   }
-
-  /** 🔹 Delete modals */
+  
+  get pages(): number[] {
+    return Array.from({ length: this.totalPages }, (_, i) => i + 1);
+  }
+  
   openDeleteSingleModal(id?: string, name?: string): void {
     if (!id) return;
     this.selectedRecordId = id;
@@ -198,7 +240,7 @@ phone: '', // Consultations don’t include phone numbers
     this.modalAction = 'deleteSingle';
     this.showModal = true;
   }
-
+  
   openDeletePageModal(): void {
     if (this.paginatedRecords.length === 0) return;
     this.modalTitle = 'Delete Page Records';
@@ -206,46 +248,48 @@ phone: '', // Consultations don’t include phone numbers
     this.modalAction = 'deletePage';
     this.showModal = true;
   }
-
+  
   closeModal(): void {
     this.showModal = false;
     this.modalAction = null;
     this.selectedRecordId = null;
     this.selectedRecordName = null;
   }
-
+  
   confirmAction(): void {
-    if (this.modalAction === 'deleteSingle') this.deleteSingleRecord();
-    else if (this.modalAction === 'deletePage') this.deletePageRecords();
+    if (this.modalAction === 'deleteSingle') {
+      this.deleteSingleRecord();
+    } else if (this.modalAction === 'deletePage') {
+      this.deletePageRecords();
+    }
     this.closeModal();
   }
-
-  /** 🔹 Delete single record */
+  
   private deleteSingleRecord(): void {
     if (!this.selectedRecordId) return;
+    
     const record = this.records.find(r => r.id === this.selectedRecordId);
     if (!record) return;
-
-    const node = `${record.formType}s`; // ✅ no "celcium/" prefix
-
+    
+    const node = `${record.formType}s`;
+    
     this.contactService.deleteRecord(`celcium/${node}`, this.selectedRecordId).subscribe({
       next: () => {
         this.records = this.records.filter(r => r.id !== this.selectedRecordId);
         this.updatePagination();
       },
-      error: err => console.error('Error deleting record:', err),
+      error: err => console.error('Error deleting record:', err)
     });
   }
-
-  /** 🔹 Delete all on page */
+  
   private deletePageRecords(): void {
     const deletePromises = this.paginatedRecords
       .filter(r => r.id)
       .map(r => {
-        const node = `${r.formType}s`; // ✅ no "celcium/" prefix
+        const node = `${r.formType}s`;
         return this.contactService.deleteRecord(`celcium/${node}`, r.id!).toPromise();
       });
-
+    
     Promise.all(deletePromises)
       .then(() => {
         this.records = this.records.filter(
@@ -255,18 +299,17 @@ phone: '', // Consultations don’t include phone numbers
       })
       .catch(err => console.error('Error deleting page records:', err));
   }
-
-  /** 🔹 PDF Download */
+  
   downloadPDF(): void {
     const filtered = this.records.filter(r => r.formType === this.activeFilter);
-
+    
     const iframe = document.createElement('iframe');
     iframe.style.display = 'none';
     document.body.appendChild(iframe);
-
+    
     const doc = iframe.contentWindow?.document;
     if (!doc) return;
-
+    
     doc.open();
     doc.write(`
       <html>
@@ -274,67 +317,66 @@ phone: '', // Consultations don’t include phone numbers
         <title>${this.getActiveFilterLabel()} Records</title>
         <style>
           body { font-family: Arial, sans-serif; padding: 20px; }
-          h2 { text-align: center; }
+          h2 { text-align: center; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 10px; }
+          .info { text-align: center; margin-bottom: 20px; color: #666; }
           table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #444; padding: 8px; font-size: 12px; }
-          th { background-color: #f2f2f2; }
+          th { background-color: #4CAF50; color: white; padding: 12px; text-align: left; }
+          td { padding: 10px; border: 1px solid #ddd; }
+          tr:nth-child(even) { background-color: #f9f9f9; }
+          tr:hover { background-color: #f5f5f5; }
+          .footer { margin-top: 30px; text-align: center; color: #888; font-size: 12px; }
         </style>
       </head>
       <body>
         <h2>${this.getActiveFilterLabel()} Records</h2>
-        <p>Generated on: ${new Date().toLocaleString()}</p>
+        <div class="info">
+          Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}<br>
+          Total Records: ${filtered.length}
+        </div>
         <table>
           <thead>
             <tr>
               <th>#</th>
               <th>Name</th>
               <th>Email</th>
-              <th>Phone</th>
+              ${this.activeFilter === 'contact' || this.activeFilter === 'registration' ? '<th>Phone</th>' : ''}
               ${this.activeFilter === 'contact' ? '<th>Message</th>' : ''}
-              ${this.activeFilter === 'registration' ? '<th>Company</th><th>Role</th>' : ''}
-              ${this.activeFilter === 'consultation' ? '<th>Service Type</th>' : ''}
-              <th>Date</th>
+              ${this.activeFilter === 'registration' ? '<th>Company</th><th>Position</th><th>Employment Status</th>' : ''}
+              ${this.activeFilter === 'consultation' ? '<th>Service Type</th><th>Booking Date</th><th>Booking Time</th><th>Referral</th>' : ''}
+              ${this.activeFilter === 'participant' ? '<th>Certificate Name</th><th>Employment</th><th>Job Title</th><th>Organization</th><th>Industry</th>' : ''}
+              <th>Date Submitted</th>
             </tr>
           </thead>
           <tbody>
-            ${filtered
-              .map(
-                (r, i) => `
-                <tr>
-                  <td>${i + 1}</td>
-                  <td>${r.name}</td>
-                  <td>${r.email}</td>
-                  <td>${r.phone}</td>
-                  ${this.activeFilter === 'contact' ? `<td>${r.message || ''}</td>` : ''}
-                  ${this.activeFilter === 'registration' ? `<td>${r.company || ''}</td><td>${r.role || ''}</td>` : ''}
-                  ${this.activeFilter === 'consultation' ? `<td>${r.serviceType || ''}</td>` : ''}
-                  <td>${new Date(r.date!).toLocaleString()}</td>
-                </tr>
-              `
-              )
-              .join('')}
+            ${filtered.map((r, i) => `
+              <tr>
+                <td>${i + 1}</td>
+                <td>${r.name || ''}</td>
+                <td>${r.email || ''}</td>
+                ${this.activeFilter === 'contact' || this.activeFilter === 'registration' ? `<td>${r.phone || ''}</td>` : ''}
+                ${this.activeFilter === 'contact' ? `<td>${(r.message || '').substring(0, 100)}${r.message && r.message.length > 100 ? '...' : ''}</td>` : ''}
+                ${this.activeFilter === 'registration' ? `<td>${r.company || ''}</td><td>${r.position || ''}</td><td>${r.isEmployed || ''}</td>` : ''}
+                ${this.activeFilter === 'consultation' ? `<td>${r.serviceType || ''}</td><td>${r.bookingDate || ''}</td><td>${r.bookingTime || ''}</td><td>${r.referral || ''}</td>` : ''}
+                ${this.activeFilter === 'participant' ? `<td>${r.certificateName || ''}</td><td>${r.isEmployed || ''}</td><td>${r.jobTitle || ''}</td><td>${r.organization || ''}</td><td>${r.industry || r.industryInterest || ''}</td>` : ''}
+                <td>${r.date ? new Date(r.date).toLocaleString() : ''}</td>
+              </tr>
+            `).join('')}
           </tbody>
         </table>
+        <div class="footer">
+          Celcium360 Admin Dashboard Report
+        </div>
       </body>
       </html>
     `);
     doc.close();
-
+    
     setTimeout(() => {
       iframe.contentWindow?.print();
       document.body.removeChild(iframe);
-    }, 400);
+    }, 500);
   }
-
-  onSearchChange(): void {
-    this.currentPage = 1;
-    this.updatePagination();
-  }
-
-  get pages(): number[] {
-    return Array.from({ length: this.totalPages }, (_, i) => i + 1);
-  }
-
+  
   logout(): void {
     this.auth.logout();
     this.router.navigate(['/login']);

@@ -16,7 +16,22 @@ export interface ContactRecord extends RecordBase {
   phone: string;
   message: string;
 }
+export interface ParticipantRecord extends RecordBase {
+  // Personal Information
+  firstName: string;
+  middleName?: string;
+  surname: string;
+  certificateName: string;
+  email: string;
 
+  // Employment Information
+  isEmployed: string;
+  jobTitle?: string;
+  organization?: string;
+  industry?: string;
+  careerStatus?: string;
+  industryInterest?: string;
+}
 export interface RegistrationRecord extends RecordBase {
   fullName: string;
   email: string;
@@ -105,4 +120,9 @@ export class ContactService {
   getConsultations(): Observable<ConsultationRecord[]> {
     return this.getRecords<ConsultationRecord>('celcium/consultations');
   }
+
+ getParticipants(): Observable<ParticipantRecord[]> {
+    return this.getRecords<ParticipantRecord>('celcium/participants');
+  }
+  
 }
