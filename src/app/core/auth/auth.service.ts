@@ -10,8 +10,8 @@ export class AuthService {
 
   /** 🔹 Dummy login method — simulates backend auth */
   login(email: string, password: string): Observable<{ token: string }> {
-    const DUMMY_EMAIL = 'admin@example.com';
-    const DUMMY_PASSWORD = 'Password123!';
+    const DUMMY_EMAIL = 'contact@celcium360Solutions';
+    const DUMMY_PASSWORD = '!Cel+cuim-360+sol@ution2025!.com';
 
     if (email === DUMMY_EMAIL && password === DUMMY_PASSWORD) {
       const fakeToken = 'fake-jwt-token-123456';

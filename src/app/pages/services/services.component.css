@@ -1,0 +1,75 @@
+/* Services */
+.service-item {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    transition: transform 0.3s ease;
+}
+
+.service-item:hover {
+    transform: translateY(-5px);
+}
+
+.service-item .service-img {
+    flex-shrink: 0;
+}
+
+.service-item .service-img img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.service-item .service-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.service-item .service-content-inner {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.service-item .service-content-inner p {
+    flex-grow: 1;
+}
+
+/* Service Tabs */
+.nav-pills .nav-link {
+    color: #333;
+    font-weight: 500;
+    padding: 12px 24px;
+    margin: 0 8px;
+    border-radius: 30px;
+    transition: all 0.3s ease;
+}
+
+.nav-pills .nav-link.active {
+    background-color: #B88D2A ;
+    color: white;
+}
+
+.nav-pills .nav-link:hover:not(.active) {
+    background-color: #f8f9fa;
+}
+
+/* Responsive adjustments */
+@media (max-width: 991px) {
+    .service-item .service-img img {
+        height: 180px;
+    }
+}
+
+@media (max-width: 575px) {
+    .service-item .service-img img {
+        height: 150px;
+    }
+    
+    .nav-pills .nav-link {
+        padding: 10px 16px;
+        margin: 4px;
+        font-size: 0.9rem;
+    }
+}
